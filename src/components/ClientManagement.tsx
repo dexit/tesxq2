@@ -106,7 +106,12 @@ const ClientManagement: React.FC = () => {
   );
 };
 
-const ClientCard = ({ data, type }: { data: any, type: 'client' | 'landlord' }) => (
+interface ClientCardProps {
+  data: any;
+  type: 'client' | 'landlord';
+}
+
+const ClientCard: React.FC<ClientCardProps> = ({ data, type }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.95 }}
     animate={{ opacity: 1, scale: 1 }}
