@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile for engineers and administrative staff",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "engineer"] },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "A single homeowner or direct customer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "Landlord": {
+      "title": "Landlord",
+      "description": "A professional landlord or agency managing multiple properties",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyName": { "type": "string" },
+        "contactName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyName"]
+    },
+    "Property": {
+      "title": "Property",
+      "description": "A physical location where maintenance is performed",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "address": { "type": "string" },
+        "postcode": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "ownerType": { "type": "string", "enum": ["client", "landlord"] },
+        "lastMaintenanceDate": { "type": "string", "format": "date-time" },
+        "nextMaintenanceDue": { "type": "string", "format": "date-time" }
+      },
+      "required": ["address", "postcode", "ownerId", "ownerType"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "A scheduled maintenance or installation task",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "engineerId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "in-progress", "completed", "cancelled"] },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "calendarEventId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["propertyId", "engineerId", "title", "startTime", "status"]
+    },
+    "Certificate": {
+      "title": "Certificate",
+      "description": "Digital CP12 Gas Safety Record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "jobId": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "engineerId": { "type": "string" },
+        "data": { "type": "object" },
+        "issuedAt": { "type": "string", "format": "date-time" },
+        "pdfUrl": { "type": "string" }
+      },
+      "required": ["jobId", "propertyId", "engineerId", "data", "issuedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/clients/{clientId}": {
+      "schema": "Client",
+      "description": "Direct homeowners"
+    },
+    "/landlords/{landlordId}": {
+      "schema": "Landlord",
+      "description": "Agencies and landlords"
+    },
+    "/properties/{propertyId}": {
+      "schema": "Property",
+      "description": "Maintenance locations"
+    },
+    "/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Service appointments"
+    },
+    "/certificates/{certificateId}": {
+      "schema": "Certificate",
+      "description": "Digital CP12 records"
+    }
+  }
+}

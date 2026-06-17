@@ -1,0 +1,6 @@
+{
+  "name": "Boiler Dispatch & Certificates",
+  "description": "Professional field service management for boiler engineers featuring dispatch dashboard, CP12 generation, and Google Workspace integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
