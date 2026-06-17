@@ -26,7 +26,7 @@ import {
   Gauge
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, query, onSnapshot } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 interface Appliance {
@@ -152,6 +152,11 @@ const CertificateGenerator: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [dbLandlords, setDbLandlords] = useState<any[]>([]);
   const [dbProperties, setDbProperties] = useState<any[]>([]);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [savedCertId, setSavedCertId] = useState<string | null>(null);
+  const [savedRefNum, setSavedRefNum] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     propertyAddress: 'Flat 4B, 22 Park Lane, London, W1K 1BE',
@@ -540,6 +545,48 @@ const CertificateGenerator: React.FC = () => {
       console.error('PDF Generation Error:', err);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const saveCertificateToDb = async (status: 'draft' | 'issued') => {
+    try {
+      setIsSaving(true);
+      const refNo = `CP12-${Math.floor(100000 + Math.random() * 900000)}`;
+      const payload = {
+        jobId: "quick-job-" + Math.floor(Math.random() * 100000),
+        propertyId: "prop-" + Math.floor(Math.random() * 100000),
+        engineerId: "eng-" + formData.engineerGasSafeNo,
+        status: status,
+        refNumber: refNo,
+        issuedAt: new Date().toISOString(),
+        verified: false,
+        data: {
+          propertyAddress: formData.propertyAddress,
+          landlordName: formData.landlordName,
+          landlordAddress: formData.landlordAddress,
+          gasTightnessTest: formData.gasTightnessTest,
+          bondingSatisfactory: formData.bondingSatisfactory,
+          emergencyValvesOk: formData.emergencyValvesOk,
+          appliances: formData.appliances,
+          engineerSummary: formData.engineerSummary,
+          engineerName: formData.engineerName,
+          engineerGasSafeNo: formData.engineerGasSafeNo,
+          engineerSignature: formData.engineerSignature
+        }
+      };
+
+      const docRef = await addDoc(collection(db, 'certificates'), payload);
+      setSavedCertId(docRef.id);
+      setSavedRefNum(refNo);
+      setSaveSuccess(true);
+      
+      if (status === 'issued') {
+        await handleDownloadPDF();
+      }
+    } catch (error) {
+      console.error("Firestore Save Error:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -979,80 +1026,121 @@ const CertificateGenerator: React.FC = () => {
                   <p className="text-sm text-slate-500 max-w-md mx-auto mt-1">Review validation and authorize compliance to digitally generate your official CP12 Gas Safety Certificate.</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Engineer Full Name</label>
-                    <input 
-                      type="text" 
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold"
-                      value={formData.engineerName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, engineerName: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gas Safe Registration ID</label>
-                    <input 
-                      type="text" 
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold"
-                      value={formData.engineerGasSafeNo}
-                      onChange={(e) => setFormData(prev => ({ ...prev, engineerGasSafeNo: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Digital Auth Stamp Reference</label>
-                    <input 
-                      type="text" 
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold"
-                      value={formData.engineerSignature}
-                      onChange={(e) => setFormData(prev => ({ ...prev, engineerSignature: e.target.value }))}
-                    />
-                  </div>
-
-                </div>
-
-                <div className="p-5 bg-blue-50/70 rounded-2xl border border-blue-100">
-                  <h4 className="font-bold text-blue-950 text-xs mb-3 flex items-center">
-                    <AlertCircle size={15} className="mr-2 text-blue-600" />
-                    AUTHORIZED DECLARATION STATEMENT
-                  </h4>
-                  <textarea 
-                    className="w-full p-4 bg-white border border-blue-200 rounded-xl focus:outline-none min-h-[90px] text-xs font-medium text-slate-700 leading-relaxed shadow-sm"
-                    placeholder="Provide any general safety comments or safety recommendations..."
-                    value={formData.engineerSummary}
-                    onChange={(e) => setFormData(prev => ({ ...prev, engineerSummary: e.target.value }))}
-                  ></textarea>
-                </div>
-
-                <div className="flex gap-4 pt-6">
-                  <button 
-                    onClick={handleDownloadPDF}
-                    disabled={isGenerating}
-                    className="flex-1 p-3 border border-slate-200 rounded-xl font-bold text-xs text-slate-600 flex items-center justify-center hover:bg-slate-50 transition-colors disabled:opacity-50"
+                {saveSuccess ? (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-8 bg-emerald-50 rounded-2xl border border-emerald-200 text-center space-y-4"
                   >
-                    <Save size={16} className="mr-2" />
-                    Store Draft
-                  </button>
-                  <button 
-                    onClick={handleDownloadPDF}
-                    disabled={isGenerating}
-                    className="flex-[2] p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 size={16} className="mr-2 animate-spin" />
-                        COMPILING OFFICIAL RECORD...
-                      </>
-                    ) : (
-                      <>
-                        <Printer size={16} className="mr-2" />
-                        ISSUE & EXPORT CP12 CERTIFICATE (PDF)
-                      </>
-                    )}
-                  </button>
-                </div>
+                    <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                      <CheckCircle2 size={32} />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-xl font-black text-emerald-950">Certificate Created Successfully!</h3>
+                      <p className="text-sm text-emerald-700 font-medium">Reference: <span className="font-bold">{savedRefNum}</span></p>
+                    </div>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                      This CP12 safety record has been securely stored in the cloud database. You can now access and share it instantly with your clients from the **Client Portal** dashboard.
+                    </p>
+                    <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
+                      <button 
+                        onClick={handleDownloadPDF}
+                        className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center"
+                      >
+                        <Printer size={14} className="mr-1.5" />
+                        Download Offline PDF Copy
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setSaveSuccess(false);
+                          setSavedCertId(null);
+                          setSavedRefNum(null);
+                          setStep(1);
+                        }}
+                        className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md group"
+                      >
+                        Generate Another Safety Record
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Engineer Full Name</label>
+                        <input 
+                          type="text" 
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold"
+                          value={formData.engineerName}
+                          onChange={(e) => setFormData(prev => ({ ...prev, engineerName: e.target.value }))}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gas Safe Registration ID</label>
+                        <input 
+                          type="text" 
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold"
+                          value={formData.engineerGasSafeNo}
+                          onChange={(e) => setFormData(prev => ({ ...prev, engineerGasSafeNo: e.target.value }))}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Digital Auth Stamp Reference</label>
+                        <input 
+                          type="text" 
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold"
+                          value={formData.engineerSignature}
+                          onChange={(e) => setFormData(prev => ({ ...prev, engineerSignature: e.target.value }))}
+                        />
+                      </div>
+
+                    </div>
+
+                    <div className="p-5 bg-blue-50/70 rounded-2xl border border-blue-100">
+                      <h4 className="font-bold text-blue-950 text-xs mb-3 flex items-center">
+                        <AlertCircle size={15} className="mr-2 text-blue-600" />
+                        AUTHORIZED DECLARATION STATEMENT
+                      </h4>
+                      <textarea 
+                        className="w-full p-4 bg-white border border-blue-200 rounded-xl focus:outline-none min-h-[90px] text-xs font-medium text-slate-700 leading-relaxed shadow-sm"
+                        placeholder="Provide any general safety comments or safety recommendations..."
+                        value={formData.engineerSummary}
+                        onChange={(e) => setFormData(prev => ({ ...prev, engineerSummary: e.target.value }))}
+                      ></textarea>
+                    </div>
+
+                    <div className="flex gap-4 pt-6">
+                      <button 
+                        onClick={() => saveCertificateToDb('draft')}
+                        disabled={isSaving || isGenerating}
+                        className="flex-1 p-3 border border-slate-200 rounded-xl font-bold text-xs text-slate-600 flex items-center justify-center hover:bg-slate-50 transition-colors disabled:opacity-50"
+                      >
+                        {isSaving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
+                        Store Draft
+                      </button>
+                      <button 
+                        onClick={() => saveCertificateToDb('issued')}
+                        disabled={isSaving || isGenerating}
+                        className="flex-[2] p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+                      >
+                        {isSaving || isGenerating ? (
+                          <>
+                            <Loader2 size={16} className="mr-2 animate-spin" />
+                            COMPILING OFFICIAL RECORD...
+                          </>
+                        ) : (
+                          <>
+                            <Printer size={16} className="mr-2" />
+                            ISSUE & EXPORT CP12 CERTIFICATE (PDF)
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

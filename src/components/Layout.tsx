@@ -9,7 +9,8 @@ import {
   Menu, 
   X,
   Plus,
-  Bell
+  Bell,
+  Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserProfile } from '../types';
@@ -30,6 +31,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, activeTab, setActiveTab
     { id: 'planner', label: 'Job Planner', icon: Calendar },
     { id: 'clients', label: 'Clients & Landlords', icon: Users },
     { id: 'certificates', label: 'Certificates', icon: FileText },
+    { id: 'portal', label: 'Client Portal', icon: Mail },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
